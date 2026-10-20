@@ -1093,7 +1093,8 @@ def create_extra_funcs(tt: TileType, db: chipdb, x: int, y: int):
                     create_reuse_wire(tt, wire, "PINCFG_IN")
                     tt.add_bel_pin(bel, port, wire, PinType.INPUT)
         elif func == 'pll':
-                pll = tt.create_bel("PLL", "PLLA", z = PLL_Z)
+                # GW5A-25A: PLLA, GW5AST-138C: PLL
+                pll = tt.create_bel("PLL", desc.get('type', 'PLLA'), z = PLL_Z)
                 pll.flags = BEL_FLAG_GLOBAL
                 for pin, wire in desc['outputs'].items():
                     create_reuse_wire(tt, wire, "PLL_O")
