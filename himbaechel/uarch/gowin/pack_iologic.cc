@@ -608,13 +608,36 @@ void GowinPacker::pack_iodelay(void)
             nets_to_remove.push_back(di_net->name);
         }
 
-        ci.movePortTo(id_SDTAP, iologic, id_SDTAP);
+        // GW5A: as input delay SDTAP and VALUE are other IOLOGIC pins, and
+        // the static delay (no DYN_DLY_EN or ADAPT_EN) uses neither VALUE
+        // nor the delay value DLYSTEP
+        bool gw5a = ctx->getBelPinWire(l_bel, ctx->id("SDTAP_IN")) != WireId();
+        bool in_pins = is_idelay && gw5a;
+        auto param_true = [&](IdString param) {
+            return ci.params.count(param) && ci.params.at(param).as_string() == "TRUE";
+        };
+        bool dyn_dly = param_true(ctx->id("DYN_DLY_EN")) || param_true(ctx->id("ADAPT_EN"));
+        ci.movePortTo(id_SDTAP, iologic, in_pins ? ctx->id("SDTAP_IN") : id_SDTAP);
         ci.movePortTo(id_SETN, iologic, id_SETN);
-        ci.movePortTo(id_VALUE, iologic, id_VALUE);
+        if (gw5a && !dyn_dly) {
+            ci.disconnectPort(id_VALUE);
+        } else {
+            ci.movePortTo(id_VALUE, iologic, in_pins ? ctx->id("VALUE_IN") : id_VALUE);
+        }
         ci.movePortTo(id_DF, iologic, id_DF);
+        for (int i = 0; i < 8; ++i) {
+            IdString port = ctx->idf("DLYSTEP[%d]", i);
+            if (dyn_dly) {
+                ci.movePortTo(port, iologic, ctx->idf("DLYSTEP%d", i));
+            } else {
+                ci.disconnectPort(port);
+            }
+        }
 
-        if (ci.params.count(id_C_STATIC_DLY)) {
-            iologic->setParam(id_C_STATIC_DLY, ci.params.at(id_C_STATIC_DLY));
+        for (IdString param : {id_C_STATIC_DLY, ctx->id("DYN_DLY_EN"), ctx->id("ADAPT_EN")}) {
+            if (ci.params.count(param)) {
+                iologic->setParam(param, ci.params.at(param));
+            }
         }
         iologic->setAttr(id_IODELAY, attr);
         cells_to_remove.push_back(ci.name);
