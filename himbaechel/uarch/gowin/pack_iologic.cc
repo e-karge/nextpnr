@@ -157,6 +157,17 @@ void GowinPacker::pack_bi_output_iol(CellInfo &ci, std::vector<IdString> &nets_t
         nets_to_remove.push_back(ci.getPort(tx_port)->name);
         out_iob->disconnectPort(id_OEN);
         ci.disconnectPort(tx_port);
+        // the tristate comes from the IOLOGIC: an OEN net without a connection, for
+        // gowin_pack also on the N pin of an emulated differential pair
+        out_iob->setParam(ctx->id("NET_OEN"), std::string("NET"));
+        if (out_iob->params.count(id_DIFF) && out_iob->params.at(id_DIFF).as_string() == "P") {
+            Loc n_loc = ctx->getBelLocation(iob_bel);
+            n_loc.z = BelZ::IOBB_Z;
+            CellInfo *n_iob = ctx->getBoundBelCell(ctx->getBelByLocation(n_loc));
+            if (n_iob != nullptr && n_iob->params.count(id_DIFF)) {
+                n_iob->setParam(ctx->id("NET_OEN"), std::string("NET"));
+            }
+        }
     } else { // disconnect TXx ports, ignore these nets
         switch (ci.type.hash()) {
         case ID_OSER8:
