@@ -159,7 +159,7 @@ void GowinPacker::pack_pll(void)
     for (auto &cell : ctx->cells) {
         auto &ci = *cell.second;
 
-        if (ci.type.in(id_rPLL, id_PLLVR, id_PLLA)) {
+        if (ci.type.in(id_rPLL, id_PLLVR, id_PLLA, id_PLL)) {
             gwu.remove_brackets(&ci);
 
             // If CLKIN is connected to a special pin, then it makes sense
